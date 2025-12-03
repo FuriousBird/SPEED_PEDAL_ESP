@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <Wire.h>
 #include <AS5600.h>
 
@@ -19,7 +20,6 @@ void sendAnglePacket(uint16_t angle12, uint16_t V1, uint16_t V2) {
   Serial.print(V1);
   Serial.print(",");
   Serial.println(V2);
-  Serial.write('\n');
 }
 
 // Send ERROR packet: prefix 0x5A + 16-bit code + 8-bit checksum
@@ -30,7 +30,7 @@ void sendErrorPacket(uint16_t err) {
   // Map error codes to human-readable strings
   switch (err) {
     case 0x01:
-      errorCode = "NON";  // not an error
+      errorCode = "NON";  // not detected
       break;
     case 0x02:
       errorCode = "STK";  // magnet too strong
@@ -81,6 +81,8 @@ void setup() {
 // ---------------------------------------------------------
 // LOOP
 // ---------------------------------------------------------
+int initial_mean = -50;
+
 void loop() {
   // -------- AS5600 STATUS --------
   int status = encoder.readStatus();
@@ -99,10 +101,24 @@ void loop() {
   uint16_t rawAngle = encoder.readAngle();   // native 12-bit angle
   rawAngle &= 0x0FFF;                        // ensure 12-bit clean
   
-
   uint16_t V1 = analogRead(VOLTAGE1_PIN);
   uint16_t V2 = analogRead(VOLTAGE2_PIN);
+  float mean = (V1 + V2) / 2.0;
+  if (initial_mean == -50) {
+    initial_mean = mean;
+  }
+  float diff = mean - initial_mean;
+  if (abs(diff) > 4095*0.05) {
+    // calibrate
+    Serial.println("\%ABSOLUTE DIFFERENCE TOO HIGH");
+  }
   sendAnglePacket(rawAngle, V1, V2);
+  if (abs(V1 - V2) > 5) {
+    V1 = 0;
+    V2 = 0;
+    
+  }
+
 
   // Slow the loop a bit so UART isn’t spammed too fast
   delay(100);
