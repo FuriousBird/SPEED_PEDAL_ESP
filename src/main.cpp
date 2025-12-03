@@ -6,6 +6,13 @@ AS5600 encoder;
 
 #define VOLTAGE1_PIN 34
 #define VOLTAGE2_PIN 35
+#define USE_CALIB 1
+
+float calib_v1_off = 0;
+float calib_v2_off = 0;
+float calib_v1_scl = 1.0;
+float calib_v2_scl = 1.0;
+
 
 // ---------------------------------------------------------
 // SEND PACKETS
@@ -100,7 +107,7 @@ void loop() {
   // -------- ANGLE (0–4095 raw) --------
   uint16_t rawAngle = encoder.readAngle();   // native 12-bit angle
   rawAngle &= 0x0FFF;                        // ensure 12-bit clean
-  
+
   uint16_t V1 = analogRead(VOLTAGE1_PIN);
   uint16_t V2 = analogRead(VOLTAGE2_PIN);
   float mean = (V1 + V2) / 2.0;
@@ -119,7 +126,6 @@ void loop() {
     
   }
 
-
   // Slow the loop a bit so UART isn’t spammed too fast
-  delay(100);
+  delay(50); //WARNING: KEEP THIS BELOW 100 to shutdown all power in case of issue within 100ms
 }
